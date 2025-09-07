@@ -31,7 +31,7 @@ def save_model(model, filename):
 
 def train_ridge(X_train, X_test, y_train, y_test):
     print("=== Ridge Regression ===")
-    ridge = Ridge()
+    ridge = Ridge(alpha=2.0, random_state=42)
     ridge.fit(X_train, y_train)
     y_pred = ridge.predict(X_test)
     mae = mean_absolute_error(y_test, y_pred)
@@ -43,7 +43,7 @@ def train_ridge(X_train, X_test, y_train, y_test):
     save_model(ridge, "ridge_model.pkl")
 
     print("\n=== RidgeCV Regression ===")
-    ridgecv = RidgeCV(cv=5)
+    ridgecv = RidgeCV(alphas=[0.1, 1.0, 10.0], cv=5)
     ridgecv.fit(X_train, y_train)
     y_pred_cv = ridgecv.predict(X_test)
     mae_cv = mean_absolute_error(y_test, y_pred_cv)
@@ -56,7 +56,7 @@ def train_ridge(X_train, X_test, y_train, y_test):
 
 def train_lasso(X_train, X_test, y_train, y_test):
     print("=== Lasso Regression ===")
-    lasso = Lasso()
+    lasso = Lasso(alpha=0.05, random_state=42)
     lasso.fit(X_train, y_train)
     y_pred = lasso.predict(X_test)
     mae = mean_absolute_error(y_test, y_pred)
@@ -68,7 +68,7 @@ def train_lasso(X_train, X_test, y_train, y_test):
     save_model(lasso, "lasso_model.pkl")
     
     print("\n=== LassoCV Regression ===")
-    lassocv = LassoCV(cv=5)
+    lassocv = LassoCV(alphas=[0.01, 0.05, 0.1, 1.0], cv=5, random_state=42)
     lassocv.fit(X_train, y_train)
     y_pred_cv = lassocv.predict(X_test)
     mae_cv = mean_absolute_error(y_test, y_pred_cv)
