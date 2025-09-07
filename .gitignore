@@ -1,10 +1,33 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Ignore data files
 *.csv
 *.txt
+*.tsv
+*.xlsx
+*.xls
 
 # Ignore model files
 *.pkl
 *.h5
+*.joblib
 
 # Ignore environment files
 .venv/
+env/
+venv/
+*.env
+
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Ignore logs
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
