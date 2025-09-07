@@ -4,92 +4,69 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
 
 # Load and create Region column
 def load_and_label_region(filepath):
     df = pd.read_csv(filepath, header=1)
-    
+
     # Create Region column: 0=Bejaia, 1=Sidi-Bel Abbes
-    df.loc[:122, "Region"] = 0
-    df.loc[122:, "Region"] = 1
-    df[['Region']] = df[['Region']].astype(int)
-    
-    # Drop null values
-    df = df.dropna().reset_index(drop=True)
-    
-    # Drop 122nd row
-    df = df.drop(122).reset_index(drop=True)
-    
-    # Clean column names
-    df.columns = df.columns.str.strip()
-    
+    n_rows = len(df)
+    df["Region"] = [0 if i < n_rows // 2 else 1 for i in range(n_rows)]
+
+    # Drop empty unnamed columns
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
     return df
 
-# Convert data types
-def convert_types(df):
-    numeric_cols = ['month', 'day', 'year', 'Temperature', 'RH', 'Ws', 
-                    'Rain', 'FFMC', 'DMC', 'DC', 'ISI', 'BUI', 'FWI', 'Region']
-    
-    for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-    
-    # Convert object columns except 'Classes' to float
-    object_cols = [col for col in df.columns if df[col].dtype == 'O' and col != 'Classes']
-    for col in object_cols:
-        df[col] = df[col].astype(float)
-    
-    return df
+def preprocess_data(df):
+    # Convert target column to numeric and handle NaNs
+    df["FWI"] = pd.to_numeric(df["FWI"], errors="coerce")
 
-# Create preprocessing pipeline
-def create_preprocessing_pipeline(df):
-    # Numeric columns
-    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    numeric_cols.remove('Region')  # Region can be treated separately if desired
-    numeric_cols.remove('FWI')  # Example of target-related feature (optional)
-    
-    # Categorical columns (objects)
-    categorical_cols = [col for col in df.columns if df[col].dtype == 'O' and col != 'Classes']
-    
-    # Numeric transformer
+    # Drop rows where target is NaN
+    df = df.dropna(subset=["FWI"])
+
+    X = df.drop(columns=["FWI"])
+    y = df["FWI"].astype(float)
+
+    # Split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.25, random_state=42
+    )
+
+    # Separate numeric and categorical features
+    numeric_features = X.select_dtypes(include=[np.number]).columns
+    categorical_features = X.select_dtypes(exclude=[np.number]).columns
+
+    # Pipelines
     numeric_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', StandardScaler())
+        ("imputer", SimpleImputer(strategy="mean")),
+        ("scaler", StandardScaler())
     ])
-    
-    # Categorical transformer
+
     categorical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='most_frequent')),
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore"))
     ])
-    
-    # Combine transformers
+
     preprocessor = ColumnTransformer(
         transformers=[
-            ('num', numeric_transformer, numeric_cols),
-            ('cat', categorical_transformer, categorical_cols)
-        ])
-    
-    # Full pipeline
-    full_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor)
-    ])
-    
-    return full_pipeline
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features)
+        ]
+    )
 
-# Prepare features and target
-def prepare_data(df):
-    X = df.drop('Classes', axis=1)
-    y = df['Classes']
-    return X, y
+    # Fit + transform
+    X_train_scaled = preprocessor.fit_transform(X_train)
+    X_test_scaled = preprocessor.transform(X_test)
 
-# Putting it all together
-def main(filepath):
+    return X_train_scaled, X_test_scaled, y_train.values, y_test.values
+
+def pipeline(filepath):
     df = load_and_label_region(filepath)
-    df = convert_types(df)
-    X, y = prepare_data(df)
-    
-    pipeline = create_preprocessing_pipeline(df)
-    X_processed = pipeline.fit_transform(X)
-    
-    print(f"Processed feature shape: {X_processed.shape}")
-    return X_processed, y, pipeline
+    return preprocess_data(df)
+
+if __name__ == "__main__":
+    X_train, X_test, y_train, y_test = pipeline("./data/Algerian_forest_fires_dataset.csv")
+    print("Train shape:", X_train.shape)
+    print("Test shape:", X_test.shape)
