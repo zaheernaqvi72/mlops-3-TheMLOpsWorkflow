@@ -1,0 +1,10 @@
+# Ignore data files
+*.csv
+*.txt
+
+# Ignore model files
+*.pkl
+*.h5
+
+# Ignore environment files
+.venv/
